@@ -4,24 +4,19 @@ export const TodoList = () => {
   const [todos, setTodos] = useState([]);
   const [newTask, setNewTask] = useState("");
 
-  const username = "ddelgado"; // tu usuario en la API
-
+  const username = "ddelgado";
 
   useEffect(() => {
-    fetch(`https://playground.4geeks.com/todo/users/${userId}`, {
-    method: "GET",
-  })
-    .then((response) => {
-      return response.json();
+    fetch(`https://playground.4geeks.com/todo/users/${username}`, {
+      method: "GET",
     })
-    .then((responseJson) => {
-      return responseJson.todos;
-    })
-    .catch((error) => {
-      console.log("Oh No! There was a problem: \n", error);
-    });
-
-
+      .then((response) => {
+        if (!response.ok) throw new Error("Error al obtener tareas");
+        return response.json();
+      })
+      .then((data) => setTodos(data.todos || []))
+      .catch((error) => console.error("Error:\n", error));
+  }, []);
 
   const handleAddTask = () => {
     if (newTask.trim() === "") return;
@@ -32,77 +27,87 @@ export const TodoList = () => {
       user: username,
     };
 
-    fetch('https://playground.4geeks.com/todo/todos/ddelgado', {
+    fetch(`https://playground.4geeks.com/todo/todos/${username}`, {
       method: "POST",
       body: JSON.stringify(newTodo),
       headers: {
         "Content-Type": "application/json",
-      }
-
+      },
     })
       .then((res) => {
         if (!res.ok) throw new Error("No se pudo crear la tarea");
         return res.json();
       })
-      .then((createdTodo) => {
-    
-        setTodos([...todos, createdTodo]);
+      .then(() => fetch(`https://playground.4geeks.com/todo/users/${username}`))
+      .then((res) => res.json())
+      .then((data) => {
+        setTodos(data.todos || []);
         setNewTask("");
-      }) 
-        .then(() => {
-          fetch(`https://playground.4geeks.com/todo/users/${username}`, {
-            method: "GET",
-          })
-            .then((res) => {
-              if (!res.ok) throw new Error("No se pudo cargar la lista");
-              return res.json();
-            })
-            .then((data) => setTodos(data.todos || []))
-            .catch((err) => console.error("Error:", err));
-        })
+      })
       .catch((err) => console.error("Error al crear tarea:", err));
   };
 
-  const deleteItem = (id) => {
-    fetch(`https://playground.4geeks.com/todo/todos/{id}`,{
-      method: "DELETE"
+  const handleDelete = (id) => {
+    fetch(`https://playground.4geeks.com/todo/todos/${id}`, {
+      method: "DELETE",
     })
-  }
+      .then((res) => {
+        if (!res.ok) throw new Error("Error al eliminar");
+        return fetch(`https://playground.4geeks.com/todo/users/${username}`);
+      })
+      .then((res) => res.json())
+      .then((data) => setTodos(data.todos || []))
+      .catch((err) => console.error("Error al eliminar tarea:", err));
+  };
 
   return (
-    <div className="flex flex-col items-center justify-start min-h-screen w-full bg-gray-100 p-4">
-      <h1 className="text-2xl font-bold mb-4">Mi lista de tareas</h1>
+    <div
+      className="d-flex justify-content-center align-items-center"
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(to bottom right, #dbeafe, #f0fdf4)",
+        padding: "30px",
+      }}
+    >
+      <div className="card shadow-lg w-100" style={{ maxWidth: "600px" }}>
+        <div className="card-body">
+          <h2 className="text-center mb-4 text-primary">Lista de tareas</h2>
 
-      <div className="w-full max-w-3xl flex mb-4">
-        <input
-          type="text"
-          className="flex-grow p-2 border border-gray-300 rounded-l"
-          placeholder="Escribe una nueva tarea..."
-          value={newTask}
-          onChange={(e) => setNewTask(e.target.value)}
-        />
-        <button
-          onClick={handleAddTask}
-          className="bg-blue-500 text-white px-4 rounded-r hover:bg-blue-600"
-        >
-          Añadir
-        </button>
-        <button
-              onClick={() => handleDelete(item.id)}
-              className="text-red-500 hover:text-red-700 text-sm"
-            >
-              Eliminar
+          <div className="input-group mb-3">
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Escribe una nueva tarea..."
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+            />
+            <button className="btn btn-primary" onClick={handleAddTask}>
+              Añadir
             </button>
-      </div>
+          </div>
 
-      <ul className="bg-white p-4 rounded shadow-md w-full max-w-3xl">
-        {todos.map((item, index) => (
-          <li key={index} className="border-b last:border-b-0 py-2">
-            {item.label}
-          </li>
-        ))}
-      </ul>
-      
+          {todos.length === 0 ? (
+            <p className="text-center text-muted">No tienes tareas aún</p>
+          ) : (
+            <ul className="list-group">
+              {todos.map((item, index) => (
+                <li
+                  key={item.id || index}
+                  className="list-group-item d-flex justify-content-between align-items-center"
+                >
+                  <span>{item.label}</span>
+                  <button
+                    className="btn btn-sm btn-outline-danger ms-2"
+                    onClick={() => handleDelete(item.id)}
+                  >
+                    Eliminar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 };
